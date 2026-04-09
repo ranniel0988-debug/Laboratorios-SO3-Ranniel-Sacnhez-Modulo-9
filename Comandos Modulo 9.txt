@@ -1,0 +1,63 @@
+===============================
+
+Practica 1
+
+===============================
+
+sudo apt update
+
+curl -fsSL https://download.webmin.com/jcameron-key.asc | sudo gpg --dearmor -o /usr/share/keyrings/webmin.gpg
+
+sudo nano /etc/apt/sources.list.d/webmin.list
+
+deb [signed-by=/usr/share/keyrings/webmin.gpg] https://download.webmin.com/download/repository sarge contrib
+
+curl -o setup-repos.sh https://raw.githubusercontent.com/webmin/webmin/master/setup-repos.sh
+
+sudo sh setup-repos.sh
+
+sudo apt install webmin -y
+
+===============================
+
+Practica 2
+
+===============================
+
+mkdir practica-terraform && cd practica-terraform
+
+terraform {
+  required_providers {
+    digitalocean = {
+      source  = "digitalocean/digitalocean"
+      version = "~> 2.0"
+    }
+  }
+}
+
+# Configuración del Token de API
+variable "do_token" {}
+
+provider "digitalocean" {
+  token = "dop_v1_"
+}
+
+# Recurso: Droplet (VM)
+resource "digitalocean_droplet" "os3vm" {
+  image    = "ubuntu-22-04-x64"
+  name     = "OS3vm"
+  region   = "nyc1"
+  size     = "s-1vcpu-1gb"
+  # Asegúrate de que el nombre de la llave coincida con la que tienes en el portal de DO
+  ssh_keys = ["7a:f6:ea:b8:bd:61:78:07:cc:99:a4:38:e6:f7:4f:ae"] 
+}
+
+output "droplet_ip" {
+  value = digitalocean_droplet.os3vm.ipv4_address
+}
+
+
+terraform init
+terraform apply
+
+cf:00:04:ee:c0:81:f6:4e:4b:3f:a8:a0:aa:2c:00:7b

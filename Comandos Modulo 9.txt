@@ -1,6 +1,9 @@
 ===============================
 
-Practica 1
+Practica 1 Instalacion de Webmin (1Pts )
+
+Instala webmin
+Muestre las Opciones de adminsitracion que se pueden ejecutar via Webmin (Administración de usuarios: Crear, y eliminar una cuenta de usuario, Gestión de servicios: Iniciar, detener y reiniciar servicio del sistema (Ej SSH). Configuración de red: Configurar una IP estatica en interfaces de red, Administración de software: actualizar  Instalar,y eliminar Alguna herramienta.Gestión de archivos y directorios: Explorar, editar un archivo y eliminarlo. Monitorización del sistema: Supervisar el rendimiento del sistema,(Memoria, Procesador Armacenamiento)
 
 ===============================
 
@@ -8,23 +11,39 @@ sudo apt update
 
 curl -fsSL https://download.webmin.com/jcameron-key.asc | sudo gpg --dearmor -o /usr/share/keyrings/webmin.gpg
 
+#cerear el archivo de configuracion de webmin
 sudo nano /etc/apt/sources.list.d/webmin.list
-
+#pegar lo siguiente
 deb [signed-by=/usr/share/keyrings/webmin.gpg] https://download.webmin.com/download/repository sarge contrib
 
-curl -o setup-repos.sh https://raw.githubusercontent.com/webmin/webmin/master/setup-repos.sh
-
+sudo curl -o setup-repos.sh https://raw.githubusercontent.com/webmin/webmin/master/setup-repos.sh
+su
 sudo sh setup-repos.sh
 
 sudo apt install webmin -y
+#habilitar el puerto 10000
+sudo ufw allo 10000
 
 ===============================
 
-Practica 2
+Practica 2 Desplieque de una VM con terraform en digital Ocean(1Pts)
+
+Proceda a instalar Terraform en la VM Server https://developer.hashicorp.com/terraform/install
+desplegar una VM usando terraform en una VM de digital ocean con las siguientes spec.
+image: ubuntu-22-04-x64
+name:OS3vm
+region:nyc1
+size:s-1vcpu-1gb
+ssh_key [llavePublicaDeTuServerAnsible]
+Documentacion AQUI
+
+Validar la creacion de la VM ingresando via SSH y tambien por el portal web de digital Ocean para validar que el despliegue se realzio de forma correcta.
 
 ===============================
-
+#crear el directorio de terraform
 mkdir practica-terraform && cd practica-terraform
+#crear este archivo y pegar esta configuracion 
+sudo nano main.tf
 
 terraform {
   required_providers {
@@ -39,7 +58,7 @@ terraform {
 variable "do_token" {}
 
 provider "digitalocean" {
-  token = "dop_v1_"
+  token = "aqui va el token de digital ocean"
 }
 
 # Recurso: Droplet (VM)
@@ -49,7 +68,7 @@ resource "digitalocean_droplet" "os3vm" {
   region   = "nyc1"
   size     = "s-1vcpu-1gb"
   # Asegúrate de que el nombre de la llave coincida con la que tienes en el portal de DO
-  ssh_keys = ["7a:f6:ea:b8:bd:61:78:07:cc:99:a4:38:e6:f7:4f:ae"] 
+  ssh_keys = ["aqui va la clave ssh"] 
 }
 
 output "droplet_ip" {
@@ -60,4 +79,258 @@ output "droplet_ip" {
 terraform init
 terraform apply
 
-cf:00:04:ee:c0:81:f6:4e:4b:3f:a8:a0:aa:2c:00:7b
+=====================================================
+
+Practica 3: Instalación de Ansible (1pts)
+
+Instalar ansible en la VM-Server (que funionara como ansible controller) junto a todas sus dependencias
+Configurar ambos equipos clientes (la VM de digital ocean y la VM de windows) para que sean compatibles con el ansible controller
+Crea un usuario llamado ansible con permisos de administrador (en el caso de windows y sudoers en el caso de linux) 
+El usuario ansible puede iniciar sesión en ansible1 usando ssh, basándose en par de llaves ssh sin contraseña.
+Crear un inventario de ansible (/etc/ansible/host) y crear un grupo llamado [win] para la pc de windows y uno llamado [linux] para la VM de linux
+pruebe la conexion a ambos host utilizando el modulo ping
+
+=====================================================
+
+
+sudo apt update
+sudo apt install ansible -y
+
+#crea archivo .cfg
+sudo mkdir ansible
+cd ansible
+sudo nano ansible.cfg
+#dentro del archivo pegar esto
+[defaults]
+inventory = /etc/ansible/hosts
+private_key_file = /home/noel/.ssh/id_rsa
+host_key_checking = False
+ask_become_pass = True
+
+[ssh_connection]
+ssh_args = -o ForwardAgent=yes -o ControlMaster=auto -o ControlPersist=60s
+
+# Crear los hosts en /etc/ansible
+sudo nano /etc/ansible/hosts
+# Dentro del archivo hosts pegamos lo siguiente:
+
+[win]
+ip de windows
+
+[win:vars]
+ansible_user=ansible
+ansible_password=20250889
+ansible_port=5985
+ansible_connection=winrm
+ansible_winrm_transport=basic
+ansible_winrm_server_cert_validation=ignore
+
+[linux]
+ip de linux
+
+[linux:vars]
+ansible_user=ansible
+ansible_ssh_private_key_file=~/.ssh/id_rsa
+ansible_become_password=20250889
+
+
+#CLIENTE DIGITALOCEAN#
+adduser ansible
+usermod -aG sudo ansible
+chsh -s /bin/bash ansible
+clear
+
+#si hacemos esto ya estamos en el usuario#
+su ansible
+cd
+clear
+
+#Generar la llave SSH (Ed25519):
+ssh-keygen -t ed25519
+Ver y copiar la llave pública:
+
+Bash
+cat ~/.ssh/id_ed25519.pub
+# Crear el usuario y darle permisos:
+sudo adduser ansible
+sudo usermod -aG sudo ansible
+
+#Configurar la llave manualmente en digital ocean
+mkdir -p /home/ansible/.ssh
+nano /home/ansible/.ssh/authorized_keys
+#aqui pegar la las sshkey del ansible cliente
+
+# Permisos de seguridad:
+chmod 700 /home/ansible/.ssh
+chmod 600 /home/ansible/.ssh/authorized_keys
+chown -R ansible:ansible /home/ansible/.ssh
+
+
+
+############################################################
+#Configurar el Windows#
+
+Comprobamos el firewall y activamos
+
+compartir archivos e impresoras solicitud eco ipv4
+compartir archivos e impresoras solicitud eco ipv4
+
+Verificando que la tarjetas de red no esten en publicas
+
+#abrimos power Shell como administrador#
+
+Set-ExecutionPolicy RemoteSigned -Force
+Enable-PSRemoting -Force
+Set-Item WSMan:\localhost\Service\Auth\Basic -Value $true
+Set-Item WSMan:\localhost\Service\AllowUnencrypted -Value $true
+Restart-Service WinRM
+
+Install-Module -Name PSWindowsUpdate -Force
+
+New-NetFirewallRule -Name "WinRM HTTP" -Protocol TCP -LocalPort 5985 -Action Allow
+
+New-LocalUser -Name "ansible" -Password (ConvertTo-SecureString "20250889" -AsPlainText -Force) -FullName "Ansible User" -Description "Usuario para Ansible"
+
+Add-LocalGroupMember -Group "Administradores" -Member "ansible"
+
+winrm create winrm/config/Listener?Address=*+Transport=HTTP
+
+winrm get winrm/config/Service
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Bash
+cat ~/.ssh/id_ed25519.pub
+# Crear el usuario y darle permisos:
+sudo adduser ansible
+sudo usermod -aG sudo ansible
+
+#Configurar la llave manualmente 
+mkdir -p /home/ansible/.ssh
+nano /home/ansible/.ssh/authorized_keys
+
+# Permisos de seguridad:
+chmod 700 /home/ansible/.ssh
+chmod 600 /home/ansible/.ssh/authorized_keys
+chown -R ansible:ansible /home/ansible/.ssh
+
+
+# Configuración de windows
+New-Item -ItemType File -Path "C:\ProgramData\ssh\administrators_authorized_keys" -Force
+notepad C:\ProgramData\ssh\administrators_authorized_keys
+New-Item -ItemType Directory -Path "C:\ProgramData\ssh" -Force
+
+icacls "C:\ProgramData\ssh\administrators_authorized_keys" /inheritance:r
+icacls "C:\ProgramData\ssh\administrators_authorized_keys" /grant "Administradores:F"
+
+C:\ProgramData\ssh\sshd_config
+Restart-Service sshd
+
+
+============================================
+
+Practica 4: Comandos Ad-Hoc (1Pts)
+
+Utilizando el modulo win_copy utilize un comando ad-hoc que copie un archivo txt ubicado en el escritorio de la maquina ansible2 a la carpeta de documentos
+Utilizando el modulo reboot utilize un comando ad-hoc que reinicie la VM ansible 1
+
+============================================
+
+
+#Verificar la ruta donde se enviara#
+
+ansible win -m win_shell -a "dir C:\Users\ansible\Documents"
+
+#######################################################################
+#Enviar el archivo#
+
+ansible win -m win_copy -a "src=C:/Users/ansible/Desktop/pruebaad.txt dest=C:/Users/ansible/Documents remote_src=yes" -k --ask-pass
+
+#Verificar que se envio#
+ansible win -m win_shell -a "dir C:\Users\ansible\Documents\pruebaad.txt"
+
+#######################################################################
+#Reiniciar el cliente de Digital Ocean#
+Reboot
+ansible linux -m reboot --become --become-user=root
+
+
+==================================================
+
+# Practica 5: Playbooks #
+
+# Crear un playbook para instalar la aplicacion notepad++ en la maquina ansible2 (Windows) #
+# Comando para crear el archivo: 
+nano install_notepad.yml
+
+
+---
+- name: Instalar Notepad++ en Ansible2
+  hosts: win
+  tasks:
+    - name: Descargar el instalador de Notepad++
+      win_get_url:
+        url: https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.5/npp.8.5.Installer.x64.exe
+        dest: C:\Users\ansible\Downloads\npp_installer.exe
+
+    - name: Instalar Notepad++
+      win_package:
+        path: C:\Users\ansible\Downloads\npp_installer.exe
+        arguments: '/S'
+
+
+
+#ejecuta el archivo .yml
+ansible-playbook install_notepad.yml
+
+
+#crear el segundo archivo .yml
+sudo nano update_repos.yml
+
+#pegar lo sigte dentro
+# Archivo: update_repos.yml
+
+- name: Actualizar repositorios en Ansible1 (Linux)
+  hosts: linux
+  become: true
+  tasks:
+    - name: Actualizar repositorios (YUM en sistemas RHEL/CentOS)
+      yum:
+        name: '*'
+        state: latest
+      when: ansible_os_family == "RedHat"
+
+    - name: Actualizar repositorios (APT en sistemas Debian/Ubuntu)
+      apt:
+        update_cache: yes
+        upgrade: dist
+      when: ansible_os_family == "Debian"
+
+ansible-playbook update_repos.yml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
